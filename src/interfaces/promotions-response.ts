@@ -156,3 +156,43 @@ export interface PromotionsQueryResponse {
   data: Data;
   extensions: Extensions;
 }
+
+// Mobile Interface
+
+export interface MPrice {
+  decimalPrice: number
+}
+
+export interface MDiscount {
+  discountEndDate: Date,
+  discountAmountDisplay: string;
+}
+
+export interface MPurchase {
+  price: MPrice;
+  discount: MDiscount;
+}
+
+export interface MMapping {
+  slug: string;
+}
+
+export interface MContent {
+  mapping: MMapping;
+  purchase: MPurchase[];
+  title: string;
+}
+
+export interface MOffers {
+  content: MContent;
+  offerId: string;
+}
+
+export interface MData {
+  topicId: string;
+  offers: MOffers[];
+}
+
+export interface MPromotionsQueryResponse {
+  data: MData[];
+}

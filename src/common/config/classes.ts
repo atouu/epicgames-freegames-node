@@ -689,6 +689,11 @@ export enum LogLevel {
   TRACE = 'trace',
 }
 
+export enum MobilePlatform {
+  ANDROID = "android",
+  IOS = "ios"
+}
+
 /**
  * @example ```jsonc
  * {

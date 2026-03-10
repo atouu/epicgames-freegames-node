@@ -17,6 +17,8 @@ export const SETUP_MFA =
   'https://www.epicgames.com/account/v2/security/ajaxUpdateTwoFactorAuthSettings';
 export const FREE_GAMES_PROMOTIONS_ENDPOINT =
   'https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions';
+export const EGS_PLATFORM_SERVICE_ENDPOINT =
+  'https://egs-platform-service.store.epicgames.com/api/v2/public/discover/home';
 export const STORE_HOMEPAGE = 'https://store.epicgames.com/';
 export const STORE_HOMEPAGE_EN = `${STORE_HOMEPAGE}en-US/`;
 export const STORE_CART_EN = `${STORE_HOMEPAGE}en-US/cart`;

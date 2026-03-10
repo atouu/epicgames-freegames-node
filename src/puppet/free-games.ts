@@ -1,6 +1,7 @@
 import PuppetBase from './base.js';
-import { config, SearchStrategy } from '../common/config/index.js';
+import { config, MobilePlatform, SearchStrategy } from '../common/config/index.js';
 import {
+  EGS_PLATFORM_SERVICE_ENDPOINT,
   FREE_GAMES_PROMOTIONS_ENDPOINT,
   GRAPHQL_ENDPOINT,
   STORE_CONTENT,
@@ -21,7 +22,10 @@ import type {
   Page as ProductInfoPage,
   ProductInfo,
 } from '../interfaces/product-info.js';
-import type { PromotionsQueryResponse } from '../interfaces/promotions-response.js';
+import type { 
+  PromotionsQueryResponse,
+  MPromotionsQueryResponse
+} from '../interfaces/promotions-response.js';
 import type {
   Element as SearchStoreElement,
   SearchStoreQueryResponse,
@@ -177,6 +181,53 @@ export default class PuppetFreeGames extends PuppetBase {
               offerNamespace: namespace,
               offerId,
               productName: game.title,
+              productSlug: pageSlug,
+            },
+          ];
+        }),
+      )
+    ).flat();
+    return allProductOffers;
+  }
+
+  async getMobileFreeGames(platform : MobilePlatform): Promise<OfferInfo[]> {
+    this.L.debug(`Getting current ${platform} free games list`);
+    const searchParams = {
+      count: '10',
+      country: 'US',
+      locale: 'en',
+      store: 'EGS',
+      start: '0',
+      platform: platform,
+    };
+    this.L.trace({ url: EGS_PLATFORM_SERVICE_ENDPOINT, searchParams }, 'Getting free games list');
+    const body = await this.request<MPromotionsQueryResponse>(
+      'GET',
+      EGS_PLATFORM_SERVICE_ENDPOINT,
+      searchParams,
+    );
+    const elements = body.data?.find(e => e.topicId === `mobile-${platform}-free-game`);
+    if (!elements) {
+      throw new Error(`Error parsing free games data: ${JSON.stringify(body)}`);
+    }
+    const allProductOffers: OfferInfo[] = (
+      await Promise.all(
+        elements.offers.map(async (game) => {
+          let pageSlug = game.content.mapping.slug;
+          let offerId: string, namespace : string;
+
+          const mappingResp = await this.getPageSlugMapping(pageSlug);
+          if (typeof mappingResp !== 'string') {
+            offerId = mappingResp.offerId;
+            namespace = mappingResp.namespace;
+          } else {
+            throw new Error(`Failed to map page slug ${pageSlug}`);
+          }
+          return [
+            {
+              offerNamespace: namespace,
+              offerId,
+              productName: game.content.title,
               productSlug: pageSlug,
             },
           ];
@@ -369,9 +420,11 @@ export default class PuppetFreeGames extends PuppetBase {
     } else if (config.searchStrategy === SearchStrategy.PROMOTION) {
       validFreeGames = await this.getCatalogFreeGames();
     } else {
-      this.L.info('searchStrategy is `all`: searching for weekly and promotional games');
+      this.L.info('searchStrategy is `all`: searching for weekly, promotional, mobile games');
       let weeklyFreeGames: OfferInfo[] | null = null;
       let catalogFreeGames: OfferInfo[] | null = null;
+      let androidFreeGames: OfferInfo[] | null = null;
+      let iosFreeGames: OfferInfo[] | null = null;
       try {
         weeklyFreeGames = await this.getWeeklyFreeGames();
       } catch (err) {
@@ -382,10 +435,25 @@ export default class PuppetFreeGames extends PuppetBase {
       } catch (err) {
         this.L.warn(err, 'Failed to lookup catalog free games');
       }
-      if (weeklyFreeGames === null && catalogFreeGames === null) {
-        throw new Error('Both free game API lookups failed');
+      try {
+        androidFreeGames = await this.getMobileFreeGames(MobilePlatform.ANDROID);
+      } catch (err) {
+        this.L.warn(err, 'Failed to lookup Android free games');
       }
-      validFreeGames = [...(weeklyFreeGames ?? []), ...(catalogFreeGames ?? [])];
+      try {
+        iosFreeGames = await this.getMobileFreeGames(MobilePlatform.IOS);
+      } catch (err) {
+        this.L.warn(err, 'Failed to lookup iOS free games');
+      }
+      if (weeklyFreeGames === null && catalogFreeGames === null
+        && androidFreeGames === null && iosFreeGames == null) {
+        throw new Error('All free game API lookups failed');
+      }
+      validFreeGames = [
+        ...(weeklyFreeGames ?? []),
+        ...(catalogFreeGames ?? []),
+        ...(androidFreeGames ?? []),
+        ...(iosFreeGames ?? [])];
       this.L.trace({ dupedFreeGames: validFreeGames });
       // dedupe
       validFreeGames = validFreeGames.filter(
