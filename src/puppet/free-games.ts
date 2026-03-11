@@ -420,7 +420,7 @@ export default class PuppetFreeGames extends PuppetBase {
     } else if (config.searchStrategy === SearchStrategy.PROMOTION) {
       validFreeGames = await this.getCatalogFreeGames();
     } else {
-      this.L.info('searchStrategy is `all`: searching for weekly, promotional, mobile games');
+      this.L.info('searchStrategy is `all`: searching for weekly, promotional and mobile games');
       let weeklyFreeGames: OfferInfo[] | null = null;
       let catalogFreeGames: OfferInfo[] | null = null;
       let androidFreeGames: OfferInfo[] | null = null;
